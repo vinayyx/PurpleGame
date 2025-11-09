@@ -1,27 +1,40 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
 import { Zap, User, RefreshCw, DollarSign } from "lucide-react";
 
+// 🧠 Assets
+import boomImage from "../assets/Boomb.png";
+import GemImage from "../assets/Gem.png";
+import backgroundMusic from "../assets/music.mp3";
+import openMineSound from "../assets/GetCoin.mp3";
+import startGameSound from "../assets/gameStrart.mp3";
+import bombBlastSound from "../assets/boombblast.mp3";
+import cashOut from "../assets/cashout.mp3";
+
 /**
  * Purple Mines Game (5x5)
+ * - Background music
+ * - Sounds for start, gem collect & bomb blast
  * - Clean modern purple UI
- * - Uses react-hot-toast for minimal notifications
- * - Game logic: open safe tiles to grow multiplier, avoid mines
  */
 
 export default function Mine() {
   const TOTAL_CELLS = 25;
-  const ADMIN_WIN_PERCENT = 0.0;
 
   const [username, setUsername] = useState("player1");
   const [betAmount, setBetAmount] = useState(100);
   const [minesCount, setMinesCount] = useState(3);
 
   const [tiles, setTiles] = useState(
-    Array.from({ length: TOTAL_CELLS }, (_, i) => ({ id: i, revealed: false, isMine: false }))
+    Array.from({ length: TOTAL_CELLS }, (_, i) => ({
+      id: i,
+      revealed: false,
+      isMine: false,
+    }))
   );
+
   const [mines, setMines] = useState(new Set());
   const [gameState, setGameState] = useState("idle");
   const [loading, setLoading] = useState(false);
@@ -30,6 +43,24 @@ export default function Mine() {
   const [betId, setBetId] = useState(null);
   const [timeOfPlay, setTimeOfPlay] = useState(null);
   const [openedSafeCount, setOpenedSafeCount] = useState(0);
+
+  // 🎵 Audio refs
+  const bgMusicRef = useRef(new Audio(backgroundMusic));
+  const startSoundRef = useRef(new Audio(startGameSound));
+  const gemSoundRef = useRef(new Audio(openMineSound));
+  const blastSoundRef = useRef(new Audio(bombBlastSound));
+  const cashoutsoundref = useRef(new Audio(cashOut));
+
+  // Background music settings
+  useEffect(() => {
+    const bg = bgMusicRef.current;
+    bg.loop = true;
+    bg.volume = 0.25; // low background volume
+    return () => {
+      bg.pause();
+      bg.currentTime = 0;
+    };
+  }, []);
 
   const generateMines = (count) => {
     const set = new Set();
@@ -47,18 +78,37 @@ export default function Mine() {
     return Math.pow(base, minesNum);
   };
 
-  const multiplier = useMemo(() => calcMultiplier(openedSafeCount, minesCount), [openedSafeCount, minesCount]);
-  const currentProfit = useMemo(() => (betAmount * multiplier).toFixed(2), [betAmount, multiplier]);
+  const multiplier = useMemo(
+    () => calcMultiplier(openedSafeCount, minesCount),
+    [openedSafeCount, minesCount]
+  );
+
+  const currentProfit = useMemo(
+    () => (betAmount * multiplier).toFixed(2),
+    [betAmount, multiplier]
+  );
 
   const startGame = async () => {
     setMessage("");
     setLoading(true);
     setGameState("playing");
     setOpenedSafeCount(0);
-    await new Promise((r) => setTimeout(r, 200));
+
+    // Start background & start game sound
+    bgMusicRef.current.play().catch(() => {});
+    startSoundRef.current.currentTime = 0;
+    startSoundRef.current.play();
+
+    await new Promise((r) => setTimeout(r, 300));
     const m = generateMines(Number(minesCount));
     setMines(m);
-    setTiles(Array.from({ length: TOTAL_CELLS }, (_, i) => ({ id: i, revealed: false, isMine: m.has(i) })));
+    setTiles(
+      Array.from({ length: TOTAL_CELLS }, (_, i) => ({
+        id: i,
+        revealed: false,
+        isMine: m.has(i),
+      }))
+    );
     setBetId(`bet_${Date.now()}`);
     setTimeOfPlay(new Date().toISOString());
     setLoading(false);
@@ -80,31 +130,48 @@ export default function Mine() {
     setTiles(updatedTiles);
 
     if (isBomb) {
+      // 🔥 Bomb sound
+      blastSoundRef.current.currentTime = 0;
+      blastSoundRef.current.play();
+
       setGameState("lost");
       setMessage("Boom! You hit a mine 💣");
       revealAll();
       toast.error("💣 You Lost the Bet!");
+      bgMusicRef.current.pause(); // stop background music
       await sendResult(false, 0);
     } else {
+      // 💎 Gem sound
+      gemSoundRef.current.currentTime = 0;
+      gemSoundRef.current.play();
+
       const newCount = openedSafeCount + 1;
       setOpenedSafeCount(newCount);
       const safeTotal = TOTAL_CELLS - minesCount;
       if (newCount >= safeTotal) {
-        const profit = (betAmount * calcMultiplier(newCount, minesCount)).toFixed(2);
+        const profit = (
+          betAmount * calcMultiplier(newCount, minesCount)
+        ).toFixed(2);
         setGameState("won");
         revealAll();
         toast.success(`💎 You Won ₹${profit}`);
+        bgMusicRef.current.pause(); // stop music
         await sendResult(true, profit);
       }
     }
   };
 
   const cashout = async () => {
+    //cashOutSong
+    cashoutsoundref.current.play();
     if (gameState !== "playing" || openedSafeCount <= 0) return;
     setGameState("cashed");
-    const profit = (betAmount * calcMultiplier(openedSafeCount, minesCount)).toFixed(2);
+    const profit = (
+      betAmount * calcMultiplier(openedSafeCount, minesCount)
+    ).toFixed(2);
     revealAll();
     toast.success(`💰 Cashed Out ₹${profit}`);
+    bgMusicRef.current.pause();
     await sendResult(true, profit);
   };
 
@@ -132,12 +199,20 @@ export default function Mine() {
 
   const resetGame = () => {
     setGameState("idle");
-    setTiles(Array.from({ length: TOTAL_CELLS }, (_, i) => ({ id: i, revealed: false, isMine: false })));
+    setTiles(
+      Array.from({ length: TOTAL_CELLS }, (_, i) => ({
+        id: i,
+        revealed: false,
+        isMine: false,
+      }))
+    );
     setMines(new Set());
     setMessage("");
     setBetId(null);
     setTimeOfPlay(null);
     setOpenedSafeCount(0);
+    bgMusicRef.current.pause();
+    bgMusicRef.current.currentTime = 0;
   };
 
   return (
@@ -156,15 +231,31 @@ export default function Mine() {
                     key={t.id}
                     onClick={() => handleTileClick(idx)}
                     disabled={gameState !== "playing" || revealed}
-                    className={`aspect-square rounded-md flex items-center justify-center text-2xl font-semibold transition-all duration-200 ${
+                    className={`aspect-square rounded-md flex items-center justify-center text-2xl font-semibold transition-all duration-300 shadow-lg ${
                       revealed
                         ? isMine
-                          ? "bg-red-600 text-white"
-                          : "bg-purple-600 text-white"
-                        : "bg-purple-950 hover:bg-purple-800 border border-purple-700"
+                          ? "bg-red-600 text-white scale-105"
+                          : "bg-purple-500 text-white scale-105"
+                        : "bg-[#240046] hover:bg-[#3a0075] border border-purple-700 hover:scale-105"
                     }`}
                   >
-                    {revealed ? (isMine ? "💣" : "💎") : ""}
+                    {revealed ? (
+                      isMine ? (
+                        <img
+                          src={boomImage}
+                          alt="Boom"
+                          className="w-10 h-10 animate-pulse"
+                        />
+                      ) : (
+                        <img
+                          src={GemImage}
+                          alt="Gem"
+                          className="w-10 h-10 animate-bounce"
+                        />
+                      )
+                    ) : (
+                      ""
+                    )}
                   </button>
                 );
               })}
@@ -208,7 +299,9 @@ export default function Mine() {
             />
             <div className="text-xs mb-4">Mines: {minesCount}</div>
 
-            <div className="text-sm mb-2">Multiplier: <b>{multiplier.toFixed(4)}×</b></div>
+            <div className="text-sm mb-2">
+              Multiplier: <b>{multiplier.toFixed(4)}×</b>
+            </div>
             <div className="text-sm mb-4">Current Profit: ₹{currentProfit}</div>
 
             <div className="flex gap-2">
@@ -241,7 +334,9 @@ export default function Mine() {
           </div>
         </div>
 
-        <div className="text-center text-xs opacity-60 mt-4">Made with 💜 React + Tailwind + Hot Toast</div>
+        <div className="text-center text-xs opacity-60 mt-4">
+          Made with ❤️ React + Tailwind + Hot Toast
+        </div>
       </div>
     </div>
   );
