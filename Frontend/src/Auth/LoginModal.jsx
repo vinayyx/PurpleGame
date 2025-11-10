@@ -5,8 +5,6 @@ import { ClipLoader } from "react-spinners";
 import { X } from "lucide-react";
 import SignupModal from "./SignupModal";
 
-const API_BASE = "http://localhost:4000/api";
-
 function LoginModal({ onCloseLogin }) {
   const [loading, setLoading] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -23,9 +21,23 @@ function LoginModal({ onCloseLogin }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(`${API_BASE}/login`, formData, {
-        withCredentials: true,
-      });
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/login`,
+        formData,
+        {
+          withCredentials: true,
+        }
+      );
+    
+      //Save Token in Local Stroage
+      if (res.data.success) {
+        localStorage.setItem("token", res.data.accessToken);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+      }
+       
+     
+
+
       toast.success("Login successful — Welcome back!");
       setTimeout(() => onCloseLogin(), 1000);
     } catch (err) {
@@ -39,7 +51,7 @@ function LoginModal({ onCloseLogin }) {
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <Toaster position="top-center" />
-        <div className="bg-[#0d001a] text-white rounded-2xl overflow-hidden flex flex-col md:flex-row w-[90%] max-w-3xl shadow-[0_0_40px_rgba(168,85,247,0.4)] animate-[fadeIn_0.3s_ease]">
+        <div className="bg-[#0d001a] text-white rounded-2xl overflow-hidden flex flex-col md:flex-row w-[90%] max-w-3xl ">
           {/* Left side (image/promo) */}
           <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-purple-900 to-fuchsia-800 items-center justify-center p-6">
             <div className="text-center">
@@ -110,18 +122,6 @@ function LoginModal({ onCloseLogin }) {
               >
                 {loading ? <ClipLoader size={22} color="#fff" /> : "Login"}
               </button>
-
-              <p className="text-center text-sm mt-3 text-purple-300">
-                Don’t have an account?{" "}
-                <span
-                  onClick={() => {
-                    setShowSignup(true);
-                  }}
-                  className="text-fuchsia-400 cursor-pointer hover:underline"
-                >
-                  Sign Up
-                </span>
-              </p>
             </form>
           </div>
         </div>

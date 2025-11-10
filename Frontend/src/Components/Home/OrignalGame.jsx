@@ -1,19 +1,23 @@
 import React, { useRef } from "react";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 function OrignalGame() {
   const scrollRef = useRef(null);
+  const Navigate = useNavigate()
 
   const games = [
     {
-      name: "Crash",
+      name: "Mine",
       players: 3669,
       color: "bg-gradient-to-br from-purple-500 to-violet-600",
+      path: "/mine"
     },
     {
-      name: "Dice",
+      name: "Crash",
       players: 82,
       color: "bg-gradient-to-br from-green-500 to-emerald-600",
+      path: "/crash"
     },
     {
       name: "Multiplayer Teen Patti",
@@ -58,14 +62,14 @@ function OrignalGame() {
   };
 
   return (
-    <section className="w-full md:w-[88vw] mx-auto py-10 relative">
+    <section className="w-full md:w-[88vw] mx-auto relative">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 ">
         <h2 className="text-start text-white text-xl sm:text-2xl font-bold">
           Ninja <span className="text-purple-500">Originals</span>
         </h2>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:mr-10">
           <button className="text-white/70 text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md hover:bg-white/20 transition">
             All
           </button>
@@ -92,6 +96,7 @@ function OrignalGame() {
         {games.map((game, i) => (
           <div
             key={i}
+            onClick={()=>Navigate(game.path)}
             className={`relative ${game.color} rounded-xl w-40 sm:w-44 md:w-52 md:h-60 sm:h-60 h-52 flex-shrink-0 shadow-lg transition-transform hover:scale-[1.03] cursor-pointer`}
           >
             {/* Game Title */}

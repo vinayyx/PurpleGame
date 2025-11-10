@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
-import { Zap, User, RefreshCw, DollarSign } from "lucide-react";
+import { Zap, RefreshCw, DollarSign } from "lucide-react";
 
 import boomImage from "../assets/Boomb.png";
 import GemImage from "../assets/Gem.png";
@@ -16,7 +16,6 @@ const API = "http://localhost:4000/api/game/mine";
 
 export default function Mine() {
   const TOTAL_CELLS = 25;
-  const [username, setUsername] = useState("player1");
   const [betAmount, setBetAmount] = useState(100);
   const [minesCount, setMinesCount] = useState(3);
   const [tiles, setTiles] = useState(
@@ -31,6 +30,7 @@ export default function Mine() {
   const [openedSafeCount, setOpenedSafeCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [userBalance, setUserBalance] = useState(null);
+  const [user, setUser] = useState({});
 
   // sounds
   const bgMusicRef = useRef(new Audio(backgroundMusic));
@@ -39,26 +39,29 @@ export default function Mine() {
   const blastSoundRef = useRef(new Audio(bombBlastSound));
   const cashoutRef = useRef(new Audio(cashOutSound));
 
+  // ✅ Load user from localStorage (with token)
+  const token = localStorage.getItem("token");
+  useEffect(() => {
+    if (token) {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      if (storedUser) {
+        setUser(storedUser);
+        setUserBalance(storedUser.balance || 0);
+      }
+    }
+  }, [token]);
+
+  // ✅ Keep background music settings
   useEffect(() => {
     bgMusicRef.current.loop = true;
     bgMusicRef.current.volume = 0.25;
-    // ensure user exists and get balance (demo)
-    (async () => {
-      try {
-        const res = await axios.post(`${API}/checkUser`, { username });
-        setUserBalance(res.data.user.balance);
-      } catch (e) {
-        console.warn(e);
-      }
-    })();
     return () => {
       bgMusicRef.current.pause();
       bgMusicRef.current.currentTime = 0;
     };
-    // eslint-disable-next-line
   }, []);
 
-  // multiplier & profit displayed locally but server is truth
+  // ✅ Dynamic Multiplier & Profit
   const multiplier = useMemo(() => {
     if (openedSafeCount <= 0) return 1;
     const total = TOTAL_CELLS;
@@ -66,35 +69,18 @@ export default function Mine() {
     const base = total / denom;
     return Math.pow(base, minesCount);
   }, [openedSafeCount, minesCount]);
+
   const currentProfit = useMemo(
     () => (betAmount * multiplier).toFixed(2),
     [betAmount, multiplier]
   );
 
-  const applyServerState = (revealedIndices, status, openedCount) => {
-    // update tiles array with revealed indices and mine info hidden (we don't get mines list)
-    setTiles((prev) =>
-      prev.map((cell) => {
-        const revealed = revealedIndices.includes(cell.id);
-        return {
-          ...cell,
-          revealed,
-          isMine: revealed ? cell.isMine || false : false,
-        };
-      })
-    );
-    setGameStatus(status);
-    setOpenedSafeCount(openedCount);
-  };
-
+  // ✅ Start Game
   const startGame = async () => {
     try {
       setLoading(true);
-      // ensure user created (demo)
-      await axios.post(`${API}/checkUser`, { username });
-
       const res = await axios.post(`${API}/start`, {
-        username,
+        username: user.username,
         betAmount,
         minesCount,
       });
@@ -110,14 +96,13 @@ export default function Mine() {
         }))
       );
 
-      // play sounds (user action => allowed)
       startSoundRef.current.currentTime = 0;
       startSoundRef.current.play();
       bgMusicRef.current.currentTime = 0;
       bgMusicRef.current.play().catch(() => {});
 
-      // fetch updated user balance
-      const userRes = await axios.post(`${API}/checkUser`, { username });
+      // ✅ Refresh balance from server
+      const userRes = await axios.post(`${API}/checkUser`, { username: user.username });
       setUserBalance(userRes.data.user.balance);
 
       toast.success("Game started");
@@ -129,69 +114,60 @@ export default function Mine() {
     }
   };
 
- const openCell = async (idx) => {
-  if (!gameId || gameStatus !== "playing") return;
-  if (tiles[idx].revealed) return;
+  // ✅ Open cell logic
+  const openCell = async (idx) => {
+    if (!gameId || gameStatus !== "playing") return;
+    if (tiles[idx].revealed) return;
 
-  try {
-    const res = await axios.post(`${API}/openCell`, { gameId, index: idx });
-    const {
-      isMine,
-      revealed,
-      openedSafeCount: opened,
-      status,
-      profit,
-      mines,
-    } = res.data;
+    try {
+      const res = await axios.post(`${API}/openCell`, { gameId, index: idx });
+      const { isMine, revealed, openedSafeCount: opened, status, profit, mines } = res.data;
 
-    let updatedTiles = [];
+      let updatedTiles = [];
 
-    if (status === "lost") {
-      // ✅ Only when lost: reveal all tiles
-      updatedTiles = tiles.map((c) => ({
-        ...c,
-        revealed: true,
-        isMine: mines.includes(c.id),
-      }));
-    } else {
-      // ✅ When not lost: reveal only safe cells
-      updatedTiles = tiles.map((c) => ({
-        ...c,
-        revealed: revealed.includes(c.id),
-        isMine: false,
-      }));
-    }
-
-    setTiles(updatedTiles);
-    setOpenedSafeCount(opened);
-    setGameStatus(status);
-
-    // 🔊 play sounds
-    if (isMine) {
-      blastSoundRef.current.currentTime = 0;
-      blastSoundRef.current.play();
-      bgMusicRef.current.pause();
-      toast.error("💣 You hit a mine! Game Over!");
-    } else {
-      gemSoundRef.current.currentTime = 0;
-      gemSoundRef.current.play();
-
-      if (status === "won") {
-        bgMusicRef.current.pause();
-        toast.success(`🎉 You won ₹${profit}`);
+      if (status === "lost") {
+        updatedTiles = tiles.map((c) => ({
+          ...c,
+          revealed: true,
+          isMine: mines.includes(c.id),
+        }));
+      } else {
+        updatedTiles = tiles.map((c) => ({
+          ...c,
+          revealed: revealed.includes(c.id),
+          isMine: false,
+        }));
       }
+
+      setTiles(updatedTiles);
+      setOpenedSafeCount(opened);
+      setGameStatus(status);
+
+      if (isMine) {
+        blastSoundRef.current.currentTime = 0;
+        blastSoundRef.current.play();
+        bgMusicRef.current.pause();
+        toast.error("💣 You hit a mine! Game Over!");
+      } else {
+        gemSoundRef.current.currentTime = 0;
+        gemSoundRef.current.play();
+
+        if (status === "won") {
+          bgMusicRef.current.pause();
+          toast.success(`🎉 You won ₹${profit}`);
+        }
+      }
+
+      // ✅ Update balance
+      const userRes = await axios.post(`${API}/checkUser`, { username: user.username });
+      setUserBalance(userRes.data.user.balance);
+    } catch (err) {
+      console.error(err);
+      toast.error(err?.response?.data?.error || "Open failed");
     }
+  };
 
-    // refresh balance
-    const userRes = await axios.post(`${API}/checkUser`, { username });
-    setUserBalance(userRes.data.user.balance);
-  } catch (err) {
-    console.error(err);
-    toast.error(err?.response?.data?.error || "Open failed");
-  }
-};
-
-
+  // ✅ Cashout
   const cashout = async () => {
     if (!gameId || gameStatus !== "playing") return;
     try {
@@ -204,8 +180,8 @@ export default function Mine() {
       setTiles((prev) => prev.map((c) => ({ ...c, revealed: true })));
       toast.success(`Cashed out ₹${profit}`);
 
-      // refresh user balance
-      const userRes = await axios.post(`${API}/checkUser`, { username });
+      // ✅ Refresh balance
+      const userRes = await axios.post(`${API}/checkUser`, { username: user.username });
       setUserBalance(userRes.data.user.balance);
     } catch (err) {
       console.error(err);
@@ -274,14 +250,8 @@ export default function Mine() {
               </div>
             </div>
 
-            <label className="text-sm opacity-80">Username</label>
-            <div className="flex items-center gap-2 mb-4 mt-1">
-              <User className="w-5 h-5 text-purple-300" />
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-white/10 border border-purple-500/30 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-purple-400"
-              />
+            <div className="text-sm opacity-80 mb-2">
+              Logged in as: <b className="text-purple-400">{user.username}</b>
             </div>
 
             <label className="text-sm opacity-80">Bet Amount (₹)</label>

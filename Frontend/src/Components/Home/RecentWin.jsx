@@ -64,7 +64,7 @@ function RecentWin() {
           100% { transform: translateX(-50%); }
         }
         .animate-marquee {
-          animation: marquee 25s linear infinite;
+          animation: marquee 8s linear infinite;
         }
       `}</style>
     </section>

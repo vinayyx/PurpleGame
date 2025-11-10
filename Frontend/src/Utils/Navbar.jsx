@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import SignupModal from "../Auth/SignupModal";
 import LoginModal from "../Auth/LoginModal";
@@ -6,6 +6,20 @@ import LoginModal from "../Auth/LoginModal";
 function Navbar() {
   const [showSignup, setShowSignup] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [user, setUser] = useState({});
+
+  // ✅ CHECK TOKEN — if token is present => user logged in
+  const token = localStorage.getItem("token");
+
+ // ✅ Fetch user only once when token exists
+  useEffect(() => {
+    if (token) {
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      setUser(storedUser);
+    }
+  }, [token]);
+
+
   return (
     <>
       <nav className="w-full bg-[#120027] border-b border-purple-700/20 sticky top-0 z-30 shadow-[0_2px_10px_rgba(100,50,150,0.25)]">
@@ -17,24 +31,33 @@ function Navbar() {
 
           {/* Buttons */}
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-            <button
-              onClick={() => setShowLogin(true)}
-              className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 rounded-full bg-transparent border border-purple-500 text-[12px] sm:text-sm md:text-base text-purple-400 font-medium hover:bg-purple-600 hover:text-white transition-all duration-300"
-            >
-              Sign In
-            </button>
+            {!token ? (
+              <>
+                <button
+                  onClick={() => setShowLogin(true)}
+                  className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 rounded-full bg-transparent border border-purple-500 text-[12px] sm:text-sm md:text-base text-purple-400 font-medium hover:bg-purple-600 hover:text-white transition-all duration-300"
+                >
+                  Sign In
+                </button>
 
-            <button
-              onClick={() => setShowSignup(true)}
-              className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 rounded-full bg-purple-600 text-[12px] sm:text-sm md:text-base text-white font-medium hover:bg-purple-700 transition-all duration-300"
-            >
-              Sign Up
-            </button>
+                <button
+                  onClick={() => setShowSignup(true)}
+                  className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 rounded-full bg-purple-600 text-[12px] sm:text-sm md:text-base text-white font-medium hover:bg-purple-700 transition-all duration-300"
+                >
+                  Sign Up
+                </button>
+              </>
+            ) : (
+              <button className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 rounded-full bg-purple-600 text-[12px] sm:text-sm md:text-base text-white font-medium hover:bg-purple-700 transition-all duration-300">
+                {`Balance:${user.balance}`}
+              </button>
+            )}
           </div>
         </div>
       </nav>
 
-      {showSignup && <SignupModal onCloseSingup={() => setShowSignup(false)} />}
+      {/* ✅ Modals */}
+      {showSignup && <SignupModal onCloseSignup={() => setShowSignup(false)} />}
       {showLogin && <LoginModal onCloseLogin={() => setShowLogin(false)} />}
     </>
   );

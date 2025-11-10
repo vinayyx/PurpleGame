@@ -4,9 +4,8 @@ import toast, { Toaster } from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
 import { X } from "lucide-react";
 
-const API_BASE = "http://localhost:4000/api";
 
-function SignupModal({ onCloseSingup }) {
+function SignupModal({ onCloseSignup }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -24,9 +23,11 @@ function SignupModal({ onCloseSingup }) {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(`${API_BASE}/register`, formData, { withCredentials: true });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/register`, formData, { withCredentials: true });
       toast.success("Account created successfully!");
-      setTimeout(() => onCloseSingup(), 1000);
+
+      console.log(res)
+      setTimeout(() => onCloseSignup(), 1000);
     } catch (err) {
       toast.error(err.response?.data?.error || "Signup failed!");
     } finally {
@@ -37,7 +38,7 @@ function SignupModal({ onCloseSingup }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <Toaster position="top-center" />
-      <div className="bg-[#0d001a] text-white rounded-2xl overflow-hidden flex flex-col md:flex-row w-[90%] max-w-3xl shadow-[0_0_40px_rgba(168,85,247,0.4)] animate-[fadeIn_0.3s_ease]">
+      <div className="bg-[#0d001a] text-white rounded-2xl overflow-hidden flex flex-col md:flex-row w-[90%] max-w-3xl ">
         
         {/* Left image / promo section */}
         <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-purple-900 to-fuchsia-800 items-center justify-center p-6">
@@ -57,7 +58,7 @@ function SignupModal({ onCloseSingup }) {
         {/* Right signup form */}
         <div className="relative flex-1 p-8 md:w-1/2">
           <button
-            onClick={onCloseSingup}
+            onClick={onCloseSignup}
             className="absolute top-3 right-3 text-gray-400 hover:text-white transition"
           >
             <X size={22} />
@@ -125,13 +126,6 @@ function SignupModal({ onCloseSingup }) {
             >
               {loading ? <ClipLoader size={22} color="#fff" /> : "Sign Up"}
             </button>
-
-            <p className="text-center text-sm mt-3 text-purple-300">
-              Already have an account?{" "}
-              <span className="text-fuchsia-400 cursor-pointer hover:underline">
-                Sign In
-              </span>
-            </p>
           </form>
         </div>
       </div>
