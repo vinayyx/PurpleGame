@@ -15,7 +15,11 @@ import auth from "./Routes/Auth/auth.routes.js"
 
 //MIDDLWARES
 const app = express();
-app.use(cors());
+app.use(
+    cors({
+        origin: true,
+        credentials: true, // allow cookies
+    }))
 app.use(express.json());
 
 
