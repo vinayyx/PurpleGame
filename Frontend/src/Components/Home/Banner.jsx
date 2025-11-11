@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import ninja from "../../assets/final.png";
 import SignupModal from "../../Auth/SignupModal";
+import toast from "react-hot-toast";
 
 function Banner() {
   const [showSignup, setShowSignup] = useState(false);
@@ -27,10 +28,16 @@ function Banner() {
             instantly!
           </p>
           <button
-            onClick={() => setShowSignup(true)}
+            onClick={() => {
+              if (token) {
+                toast.success("UnderDevopment");
+              } else {
+                setShowSignup(true);
+              }
+            }}
             className="bg-purple-600 hover:bg-purple-900  px-4 py-1 md:px-6 md:py-3 rounded-full text-white font-semibold transition-all duration-300"
           >
-           {token ? "Deposit Now" : "Join Now" } 
+            {token ? "Deposit Now" : "Join Now"}
           </button>
         </div>
 
@@ -42,7 +49,7 @@ function Banner() {
         />
       </div>
 
-      {showSignup && <SignupModal onCloseSingup={() => setShowSignup(false)} />}
+      {showSignup && <SignupModal onCloseSignup={() => setShowSignup(false)} />}
     </>
   );
 }

@@ -11,22 +11,15 @@ export const UserProvider = ({ children }) => {
   const [loggedInUser, setloggedInUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-
-
-
-
   //GETING TOKEN FROM LOCALSTORAGE
-  const token = localStorage.getItem("token");
+  const [token, setToken] = useState(localStorage.getItem("token"));
 
-  //FATCHING USER 
+  //FATCHING USER
   const fetchUser = async () => {
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/me`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setloggedInUser(res.data.user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -36,23 +29,20 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-
-
   useEffect(() => {
     if (token) fetchUser();
     else setLoading(false);
   }, [token]);
 
+  const refetchUser = () => fetchUser();
+
   const value = {
     loggedInUser,
     setloggedInUser,
     loading,
-    refetchUser: fetchUser,
+    refetchUser,
+    setToken
   };
 
-  return (
-    <UserContext.Provider value={value}>
-      {children}
-    </UserContext.Provider>
-  );
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 };

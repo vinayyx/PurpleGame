@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import axios from "axios";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
 import { Zap, RefreshCw, DollarSign } from "lucide-react";
 import { useFetchedUser } from "../Context/UserContext";
@@ -38,8 +38,7 @@ export default function Mine() {
   const blastSoundRef = useRef(new Audio(bombBlastSound));
   const cashoutRef = useRef(new Audio(cashOutSound));
 
-  const { loggedInUser , refetchUser } = useFetchedUser();
-
+  const { loggedInUser, refetchUser } = useFetchedUser();
 
   useEffect(() => {
     if (loggedInUser) {
@@ -47,8 +46,6 @@ export default function Mine() {
       setUserBalance(loggedInUser?.balance.toFixed(2));
     }
   }, [loggedInUser]);
-
- 
 
   // Keep background music settings
   useEffect(() => {
@@ -87,7 +84,7 @@ export default function Mine() {
         }
       );
       const { gameId: gid } = res.data;
-      refetchUser()
+      refetchUser();
       setGameId(gid);
       setGameStatus("playing");
       setOpenedSafeCount(0);
@@ -110,7 +107,7 @@ export default function Mine() {
         { username: user.username }
       );
       setUserBalance(userRes.data.user.balance);
-      refetchUser()
+      refetchUser();
 
       toast.success("Game started");
     } catch (err) {
@@ -181,7 +178,7 @@ export default function Mine() {
         { username: user.username }
       );
       setUserBalance(userRes.data.user.balance);
-      refetchUser()
+      refetchUser();
     } catch (err) {
       console.error(err);
       toast.error(err?.response?.data?.error || "Open failed");
@@ -201,7 +198,7 @@ export default function Mine() {
       cashoutRef.current.play().catch(() => {});
       bgMusicRef.current.pause();
       setGameStatus("cashed");
-      refetchUser()
+      refetchUser();
       setTiles((prev) => prev.map((c) => ({ ...c, revealed: true })));
       toast.success(`Cashed out ₹${profit}`);
 
@@ -211,7 +208,7 @@ export default function Mine() {
         { username: user.username }
       );
       setUserBalance(userRes.data.user.balance);
-      refetchUser()
+      refetchUser();
     } catch (err) {
       console.error(err);
       toast.error(err?.response?.data?.error || "Cashout failed");
@@ -245,7 +242,6 @@ export default function Mine() {
 
   return (
     <div className="min-h-[91vh] bg-[#0b0b0b] text-white flex items-center justify-center p-4">
-      <Toaster position="top-center" />
 
       <div className="w-full h-full max-w-7xl grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Left control panel: md:col-span-4 */}

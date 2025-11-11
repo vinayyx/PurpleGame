@@ -92,13 +92,13 @@ function OrignalGame() {
       {/* Scrollable Container */}
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth px-2 md:px-0"
+        className="flex gap-4 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth px-2 md:px-0"
       >
         {games.map((game, i) => (
           <div
             key={i}
             onClick={() => game.path && Navigate(game.path)}
-            className={`relative rounded-xl w-40 sm:w-44 md:w-52 md:h-60 sm:h-60 h-52 flex-shrink-0 shadow-lg transition-transform hover:scale-[1.03] cursor-pointer overflow-hidden`}
+            className={`relative rounded-xl w-40 sm:w-44 md:w-52 md:h-64 sm:h-60 h-52 flex-shrink-0 shadow-lg transition-transform hover:scale-[1.03] cursor-pointer overflow-hidden`}
             style={{
               backgroundImage: game.image
                 ? `url(${game.image})`
@@ -109,10 +109,10 @@ function OrignalGame() {
             }}
           >
             {/* Optional overlay (for better text visibility) */}
-            <div className="absolute inset-0 bg-black/40"></div>
+            <div className="absolute inset-0 bg-black/20"></div>
 
             {/* Game Title */}
-            <div className="absolute bottom-4 left-4 text-white z-10">
+            <div className="absolute bottom-4 left-0 text-white z-10">
               <div className="flex items-center text-xs text-white/80 mt-1">
                 <div className="flex items-center ml-2 gap-1">
                   <Users size={12} />

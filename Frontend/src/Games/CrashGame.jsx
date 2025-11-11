@@ -1,4 +1,4 @@
-// CrashGameResponsiveFull_Fixed.jsx
+// CrashGameDarkRoyal.jsx
 import React, { useState, useEffect, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import axios from "axios";
@@ -9,60 +9,48 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
-
-const API_URL = "https://jsonplaceholder.typicode.com/posts";
 
 const formatMoney = (v) =>
   typeof v === "number" ? v.toFixed(2) : parseFloat(v || 0).toFixed(2);
+
 const generateCrashMultiplier = () =>
   parseFloat((Math.random() * 8.99 + 1).toFixed(2));
-const createInitialDataPoint = () => ({ x: 0, y: 1.0 });
+
+const createInitialDataPoint = () => ({ x: 0, y: 0 });
 
 const CrashGame = () => {
   const [phase, setPhase] = useState("betting");
   const [bet, setBet] = useState("");
   const [autoCashout, setAutoCashout] = useState("");
-  const [multiplier, setMultiplier] = useState(1.0);
+  const [multiplier, setMultiplier] = useState(0);
   const [crashMultiplier, setCrashMultiplier] = useState(null);
   const [hasCashedOut, setHasCashedOut] = useState(false);
   const [winnings, setWinnings] = useState(0);
   const [timeLeft, setTimeLeft] = useState(10);
   const [history, setHistory] = useState([]);
   const [points, setPoints] = useState([createInitialDataPoint()]);
-  const [chatInput, setChatInput] = useState("");
-  const [messages, setMessages] = useState([
-    { id: 1, user: "system", text: "Welcome! Place your bet to start playing." },
-  ]);
 
-  // ✅ Bet placed tracking (state + ref)
-  const [betPlaced, setBetPlaced] = useState(false);
   const betPlacedRef = useRef(false);
-
-  const bettingIntervalRef = useRef(null);
-  const playIntervalRef = useRef(null);
-  const playStartRef = useRef(null);
-  const crashRef = useRef(null);
   const hasCashedRef = useRef(false);
-  const msgIdRef = useRef(100);
+  const crashRef = useRef(null);
+  const playIntervalRef = useRef(null);
+  const bettingIntervalRef = useRef(null);
+  const playStartRef = useRef(null);
 
-  const username = "Player123";
-
-  // --- Betting Countdown ---
   const startBettingWindow = () => {
     setPhase("betting");
     setTimeLeft(10);
-    setMultiplier(1.0);
+    setMultiplier(0);
     setPoints([createInitialDataPoint()]);
     setCrashMultiplier(null);
     setHasCashedOut(false);
     setWinnings(0);
-    setBetPlaced(false);
     betPlacedRef.current = false;
     hasCashedRef.current = false;
 
     if (bettingIntervalRef.current) clearInterval(bettingIntervalRef.current);
-
     bettingIntervalRef.current = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
@@ -70,7 +58,7 @@ const CrashGame = () => {
           if (betPlacedRef.current) {
             startPlayRound();
           } else {
-            toast("⏭️ Round skipped — no bet placed.", { icon: "⚠️" });
+            toast("⏭️ No bet placed — skipping round", { icon: "⚠️" });
             startBettingWindow();
           }
           return 0;
@@ -80,32 +68,31 @@ const CrashGame = () => {
     }, 1000);
   };
 
-  // --- Start Play Round ---
   const startPlayRound = () => {
     const crash = generateCrashMultiplier();
     crashRef.current = crash;
     setCrashMultiplier(crash);
     setPhase("playing");
-    setMultiplier(1.0);
+    setMultiplier(0);
     setPoints([createInitialDataPoint()]);
     playStartRef.current = Date.now();
 
     if (playIntervalRef.current) clearInterval(playIntervalRef.current);
-
     playIntervalRef.current = setInterval(() => {
       const elapsedMs = Date.now() - playStartRef.current;
-      const newMultiplier = parseFloat(Math.exp(elapsedMs / 3000).toFixed(4));
+      const elapsedSec = elapsedMs / 1000;
 
+      // exponential multiplier growth
+      const newMultiplier = parseFloat((1.002 ** (elapsedSec * 200)).toFixed(3));
+
+      // crash check
       if (newMultiplier >= crashRef.current) {
         clearInterval(playIntervalRef.current);
-        setPoints((prev) => [
-          ...prev,
-          { x: elapsedMs / 1000, y: crashRef.current },
-        ]);
-
         if (!hasCashedRef.current && betPlacedRef.current) {
           const betVal = parseFloat(bet || 0) || 0;
-          toast.error(`💥 Crashed at ${crashRef.current}x — lost ${formatMoney(betVal)}!`);
+          toast.error(
+            `💥 Crashed at ${crashRef.current}x — lost ${formatMoney(betVal)}!`
+          );
           setHistory((h) => [
             {
               time: new Date(),
@@ -116,22 +103,20 @@ const CrashGame = () => {
             },
             ...h,
           ]);
-          postGameResult(betVal, 0);
         }
-
         setPhase("ended");
         setTimeout(() => startBettingWindow(), 3000);
         return;
       }
 
-      setPoints((prev) => {
-        const next = [...prev, { x: elapsedMs / 1000, y: newMultiplier }];
-        if (next.length > 300) next.shift();
-        return next;
-      });
+      // ✅ diagonal growth (both X and Y increase)
+      const newX = elapsedSec * 2;
+      const newY = newMultiplier;
 
-      setMultiplier(newMultiplier);
+      setPoints((prev) => [...prev, { x: newX, y: newY }]);
+      setMultiplier(newY);
 
+      // auto cashout
       if (
         autoCashout &&
         parseFloat(autoCashout) > 0 &&
@@ -140,10 +125,9 @@ const CrashGame = () => {
       ) {
         handleCashout(newMultiplier, true);
       }
-    }, 60);
+    }, 100);
   };
 
-  // --- Cashout ---
   const handleCashout = (currentMultiplier = multiplier, isAuto = false) => {
     if (phase !== "playing" || hasCashedRef.current) return;
 
@@ -173,29 +157,9 @@ const CrashGame = () => {
       ...h,
     ]);
 
-    postGameResult(betVal, winAmount);
-
     setTimeout(() => startBettingWindow(), 2500);
   };
 
-  // --- API Post ---
-  const postGameResult = async (betAmount, winAmount) => {
-    try {
-      await axios.post(API_URL, {
-        username,
-        betAmount,
-        winAmount,
-        lossAmount: winAmount === 0 ? betAmount : 0,
-        betId: `BET-${Date.now()}`,
-        gameName: "Crash Royale",
-        timestamp: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.error("API Error:", err);
-    }
-  };
-
-  // --- Mount ---
   useEffect(() => {
     startBettingWindow();
     return () => {
@@ -204,54 +168,25 @@ const CrashGame = () => {
     };
   }, []);
 
-  // --- Chat Simulation ---
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const rand = Math.random();
-      msgIdRef.current += 1;
-      if (rand < 0.3)
-        setMessages((m) => [
-          ...m,
-          {
-            id: msgIdRef.current,
-            user: "system",
-            text: `Player${Math.floor(Math.random() * 900 + 100)} joined.`,
-          },
-        ]);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const sendMessage = () => {
-    if (!chatInput.trim()) return;
-    msgIdRef.current += 1;
-    setMessages((m) => [
-      ...m,
-      { id: msgIdRef.current, user: "you", text: chatInput.trim() },
-    ]);
-    setChatInput("");
-  };
-
-  // --- Place Bet ---
   const handlePlaceBet = () => {
     if (!bet || parseFloat(bet) <= 0) {
       toast.error("Enter a valid bet amount!");
       return;
     }
-    setBetPlaced(true);
     betPlacedRef.current = true;
     toast.success(`✅ Bet placed: ${bet} coins`);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-950 to-purple-800 text-white p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#130720] via-[#1a082c] to-[#2d0a4b] text-white p-6">
       <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
-        {/* Top Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* --- Left Panel --- */}
-          <div className="lg:col-span-4 bg-[rgba(255,255,255,0.05)] rounded-3xl p-6 space-y-5 shadow-lg">
-            <h2 className="text-2xl font-bold text-purple-200">Crash Royale 🚀</h2>
+          {/* Left Panel */}
+          <div className="lg:col-span-4 bg-[rgba(255,255,255,0.06)] rounded-3xl p-6 space-y-5 shadow-xl border border-purple-800/30 backdrop-blur-md">
+            <h2 className="text-2xl font-bold text-purple-300">
+              Crash Royale 🚀
+            </h2>
 
             <div>
               <label className="text-sm text-purple-300">Bet Amount</label>
@@ -259,7 +194,7 @@ const CrashGame = () => {
                 type="number"
                 value={bet}
                 onChange={(e) => setBet(e.target.value)}
-                disabled={phase !== "betting" || betPlaced}
+                disabled={phase !== "betting"}
                 className="w-full mt-2 p-2 rounded-lg text-black"
                 placeholder="e.g. 10.00"
               />
@@ -281,7 +216,7 @@ const CrashGame = () => {
                   <button
                     key={m}
                     onClick={() => setAutoCashout(m.toString())}
-                    className="px-3 py-1 bg-purple-600 hover:bg-purple-500 rounded-md"
+                    className="px-3 py-1 bg-purple-700 hover:bg-purple-500 rounded-md"
                   >
                     {m}x
                   </button>
@@ -289,15 +224,15 @@ const CrashGame = () => {
               </div>
             </div>
 
-            {/* --- Action Buttons --- */}
             <div className="flex items-center justify-between">
               <div className="font-semibold">
-                {phase === "betting" && `🕐 ${timeLeft}s to place bet`}
+                {phase === "betting" && `🕐 ${timeLeft}s to bet`}
                 {phase === "playing" && `${multiplier.toFixed(2)}x`}
-                {phase === "ended" && `💥 Crashed @ ${crashMultiplier?.toFixed(2)}x`}
+                {phase === "ended" &&
+                  `💥 Crashed @ ${crashMultiplier?.toFixed(2)}x`}
               </div>
 
-              {phase === "betting" && !betPlaced && (
+              {phase === "betting" && (
                 <button
                   onClick={handlePlaceBet}
                   className="px-4 py-2 bg-green-500 hover:bg-green-400 rounded-lg text-black font-bold"
@@ -317,32 +252,41 @@ const CrashGame = () => {
             </div>
           </div>
 
-          {/* --- Chart --- */}
-          <div className="lg:col-span-8 bg-[rgba(255,255,255,0.04)] rounded-3xl p-4 flex h-[50vh] flex-col shadow-xl">
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-2 gap-2">
-              <h2 className="text-4xl sm:text-5xl font-extrabold text-yellow-400">
+          {/* Chart Section */}
+          <div className="lg:col-span-8 bg-[rgba(255,255,255,0.05)] rounded-3xl p-4 h-[60vh] shadow-xl border border-purple-800/20">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-5xl font-extrabold text-purple-400 drop-shadow-lg">
                 {multiplier.toFixed(2)}x
               </h2>
-              <div className="text-purple-300 font-semibold text-lg sm:text-xl uppercase">
+              <div className="text-purple-300 font-semibold text-lg uppercase tracking-wide">
                 {phase}
               </div>
             </div>
 
-            {/* Chart responsive fix */}
-            <div className="flex-1 h-[280px] sm:h-[380px] md:h-[480px] lg:h-[500px] bg-[#0b0c17] rounded-xl overflow-hidden p-3">
+            <div className="flex-1 h-full bg-[#0a0115] rounded-xl overflow-hidden p-3">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={points}>
+                <AreaChart
+                  data={points}
+                  margin={{ top: 5, right: 0, left: 0, bottom: 0 }}
+                >
                   <defs>
-                    <linearGradient id="colorMult" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorMult" x1="1" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#a855f7" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#9333ea" stopOpacity={0.1} />
+                      <stop
+                        offset="100%"
+                        stopColor="#581c87"
+                        stopOpacity={0.1}
+                      />
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="x" hide />
-                  <YAxis hide domain={[1, Math.max(...points.map((p) => p.y), 10) + 1]} />
+                  <YAxis
+                    hide
+                    domain={[0, Math.max(...points.map((p) => p.y), 10) + 1]}
+                  />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#1f2937",
+                      backgroundColor: "#1f0937",
                       border: "none",
                       color: "#fff",
                     }}
@@ -354,49 +298,27 @@ const CrashGame = () => {
                     stroke="#a855f7"
                     strokeWidth={3}
                     fill="url(#colorMult)"
-                    dot={false}
                     isAnimationActive={false}
                   />
+
+                  {/* 🔴 Crash line indicator */}
+                  {phase === "ended" && crashMultiplier && (
+                    <ReferenceLine
+                      y={crashMultiplier}
+                      stroke="red"
+                      strokeWidth={2}
+                      strokeDasharray="4"
+                      label={{
+                        position: "right",
+                        value: `💥 Crash @ ${crashMultiplier.toFixed(2)}x`,
+                        fill: "red",
+                        fontSize: 14,
+                      }}
+                    />
+                  )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </div>
-        </div>
-
-        {/* --- Chat --- */}
-        <div className="bg-[rgba(255,255,255,0.03)] rounded-3xl p-4 flex flex-col max-h-[350px] shadow-inner">
-          <h3 className="text-lg font-bold text-purple-200 mb-2">Live Chat 💬</h3>
-          <div className="flex-1 overflow-auto mb-3 space-y-2 p-2 bg-[rgba(0,0,0,0.15)] rounded-lg">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`p-2 rounded-md ${
-                  m.user === "you"
-                    ? "bg-purple-600 self-end text-white"
-                    : m.user === "system"
-                    ? "bg-[rgba(255,255,255,0.05)] text-purple-200"
-                    : "bg-[rgba(255,255,255,0.08)] text-white"
-                }`}
-              >
-                <div className="text-xs text-purple-300 mb-1">{m.user}</div>
-                <div className="text-sm">{m.text}</div>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              className="flex-1 p-2 rounded-lg text-black"
-              placeholder="Type a message..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            />
-            <button
-              className="px-4 py-2 bg-purple-500 hover:bg-purple-400 rounded-lg"
-              onClick={sendMessage}
-            >
-              Send
-            </button>
           </div>
         </div>
       </div>

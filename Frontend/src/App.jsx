@@ -5,6 +5,7 @@ import CrashGame from "./Games/CrashGame";
 import Hero from "./Pages/Hero";
 import SignupModal from "./Auth/SignupModal";
 import MinePage from "./Pages/MinePage";
+import PlinkoGame from "./Games/PlinkoGame";
 
 function App() {
   return (
@@ -14,8 +15,8 @@ function App() {
         <Route path="/mine" element={<MinePage />} />
         <Route path="/crash" element={<CrashGame />} />
         <Route path="/hero" element={<Hero />} />
+        <Route path="/pliko" element={<PlinkoGame />} />
       </Routes>
-
     </div>
   );
 }

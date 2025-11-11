@@ -4,6 +4,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { ClipLoader } from "react-spinners";
 import { X } from "lucide-react";
 import SignupModal from "./SignupModal";
+import { useFetchedUser } from "../Context/UserContext";
 
 function LoginModal({ onCloseLogin }) {
   const [loading, setLoading] = useState(false);
@@ -12,6 +13,9 @@ function LoginModal({ onCloseLogin }) {
     username: "",
     password: "",
   });
+
+  //CONTEXT SECTION
+  const { refetchUser , setToken} = useFetchedUser();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -28,17 +32,15 @@ function LoginModal({ onCloseLogin }) {
           withCredentials: true,
         }
       );
-    
-      //Save Token in Local Stroage
+
+      //Save Token in Local Stroage & UPDATE THE STATE
       if (res.data.success) {
         localStorage.setItem("token", res.data.accessToken);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+        setToken(res.data.accessToken); 
+        await refetchUser();
       }
-       
-     
 
-
-      toast.success("Login successful — Welcome back!");
+      toast.success("Login successful");
       setTimeout(() => onCloseLogin(), 1000);
     } catch (err) {
       toast.error(err.response?.data?.error || "Invalid credentials!");
@@ -50,7 +52,6 @@ function LoginModal({ onCloseLogin }) {
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <Toaster position="top-center" />
         <div className="bg-[#0d001a] text-white rounded-2xl overflow-hidden flex flex-col md:flex-row w-[90%] max-w-3xl ">
           {/* Left side (image/promo) */}
           <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-purple-900 to-fuchsia-800 items-center justify-center p-6">

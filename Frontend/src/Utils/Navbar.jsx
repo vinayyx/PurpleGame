@@ -2,23 +2,26 @@ import React, { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import SignupModal from "../Auth/SignupModal";
 import LoginModal from "../Auth/LoginModal";
+import { useFetchedUser } from "../Context/UserContext";
 
 function Navbar() {
   const [showSignup, setShowSignup] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [user, setUser] = useState({});
 
-  // ✅ CHECK TOKEN — if token is present => user logged in
+  //FATCHING TOKEN FROM LOCALSTORAGE
   const token = localStorage.getItem("token");
 
- // ✅ Fetch user only once when token exists
-  useEffect(() => {
-    if (token) {
-      const storedUser = JSON.parse(localStorage.getItem("user"));
-      setUser(storedUser);
-    }
-  }, [token]);
+  //FATCHING USER FROM USERCONTEXT
+  const { loggedInUser } = useFetchedUser();
 
+  useEffect(() => {
+    if (loggedInUser) {
+      setUser(loggedInUser);
+    }
+  }, [loggedInUser]);
+
+  const balance = Number(user.balance).toFixed(1);
 
   return (
     <>
@@ -49,7 +52,7 @@ function Navbar() {
               </>
             ) : (
               <button className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 rounded-full bg-purple-600 text-[12px] sm:text-sm md:text-base text-white font-medium hover:bg-purple-700 transition-all duration-300">
-                {`Balance:${user.balance}`}
+                {`Balance: ₹${isNaN(balance) ? 0 : balance}`}
               </button>
             )}
           </div>

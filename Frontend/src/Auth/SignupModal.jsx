@@ -37,7 +37,6 @@ function SignupModal({ onCloseSignup }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <Toaster position="top-center" />
       <div className="bg-[#0d001a] text-white rounded-2xl overflow-hidden flex flex-col md:flex-row w-[90%] max-w-3xl ">
         
         {/* Left image / promo section */}
