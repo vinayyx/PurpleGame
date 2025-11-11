@@ -1,23 +1,24 @@
 import React, { useRef } from "react";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import mineIcon from "../../assets/mineIcon.png";
 
 function OrignalGame() {
   const scrollRef = useRef(null);
-  const Navigate = useNavigate()
+  const Navigate = useNavigate();
 
   const games = [
     {
       name: "Mine",
       players: 3669,
-      color: "bg-gradient-to-br from-purple-500 to-violet-600",
-      path: "/mine"
+      image: mineIcon,
+      path: "/mine",
     },
     {
       name: "Crash",
       players: 82,
       color: "bg-gradient-to-br from-green-500 to-emerald-600",
-      path: "/crash"
+      path: "/crash",
     },
     {
       name: "Multiplayer Teen Patti",
@@ -96,16 +97,23 @@ function OrignalGame() {
         {games.map((game, i) => (
           <div
             key={i}
-            onClick={()=>Navigate(game.path)}
-            className={`relative ${game.color} rounded-xl w-40 sm:w-44 md:w-52 md:h-60 sm:h-60 h-52 flex-shrink-0 shadow-lg transition-transform hover:scale-[1.03] cursor-pointer`}
+            onClick={() => game.path && Navigate(game.path)}
+            className={`relative rounded-xl w-40 sm:w-44 md:w-52 md:h-60 sm:h-60 h-52 flex-shrink-0 shadow-lg transition-transform hover:scale-[1.03] cursor-pointer overflow-hidden`}
+            style={{
+              backgroundImage: game.image
+                ? `url(${game.image})`
+                : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
           >
+            {/* Optional overlay (for better text visibility) */}
+            <div className="absolute inset-0 bg-black/40"></div>
+
             {/* Game Title */}
-            <div className="absolute bottom-4 left-4 text-white">
-              <p className="font-extrabold text-lg uppercase tracking-wide">
-                {game.name}
-              </p>
+            <div className="absolute bottom-4 left-4 text-white z-10">
               <div className="flex items-center text-xs text-white/80 mt-1">
-                <span className="opacity-80">ORIGINAL GAME</span>
                 <div className="flex items-center ml-2 gap-1">
                   <Users size={12} />
                   <span>{game.players}</span>

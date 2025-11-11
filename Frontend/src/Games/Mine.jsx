@@ -12,7 +12,7 @@ import startGameSound from "../assets/gameStrart.mp3";
 import bombBlastSound from "../assets/boombblast.mp3";
 import cashOutSound from "../assets/cashout.mp3";
 
-const API = "http://localhost:4000/api/game/mine";
+const API = "http://localhost:4000/api";
 
 export default function Mine() {
   const TOTAL_CELLS = 25;
@@ -79,7 +79,7 @@ export default function Mine() {
   const startGame = async () => {
     try {
       setLoading(true);
-      const res = await axios.post(`${API}/start`, {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/start`, {
         username: user.username,
         betAmount,
         minesCount,
@@ -102,7 +102,7 @@ export default function Mine() {
       bgMusicRef.current.play().catch(() => {});
 
       // ✅ Refresh balance from server
-      const userRes = await axios.post(`${API}/checkUser`, { username: user.username });
+      const userRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`, { username: user.username });
       setUserBalance(userRes.data.user.balance);
 
       toast.success("Game started");
@@ -120,7 +120,7 @@ export default function Mine() {
     if (tiles[idx].revealed) return;
 
     try {
-      const res = await axios.post(`${API}/openCell`, { gameId, index: idx });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/openCell`, { gameId, index: idx });
       const { isMine, revealed, openedSafeCount: opened, status, profit, mines } = res.data;
 
       let updatedTiles = [];
@@ -159,7 +159,7 @@ export default function Mine() {
       }
 
       // ✅ Update balance
-      const userRes = await axios.post(`${API}/checkUser`, { username: user.username });
+      const userRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`, { username: user.username });
       setUserBalance(userRes.data.user.balance);
     } catch (err) {
       console.error(err);
@@ -171,7 +171,7 @@ export default function Mine() {
   const cashout = async () => {
     if (!gameId || gameStatus !== "playing") return;
     try {
-      const res = await axios.post(`${API}/cashOut`, { gameId });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/cashOut`, { gameId });
       const { profit } = res.data;
       cashoutRef.current.currentTime = 0;
       cashoutRef.current.play();
@@ -181,7 +181,7 @@ export default function Mine() {
       toast.success(`Cashed out ₹${profit}`);
 
       // ✅ Refresh balance
-      const userRes = await axios.post(`${API}/checkUser`, { username: user.username });
+      const userRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`, { username: user.username });
       setUserBalance(userRes.data.user.balance);
     } catch (err) {
       console.error(err);
