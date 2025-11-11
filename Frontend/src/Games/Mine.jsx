@@ -12,8 +12,6 @@ import startGameSound from "../assets/gameStrart.mp3";
 import bombBlastSound from "../assets/boombblast.mp3";
 import cashOutSound from "../assets/cashout.mp3";
 
-const API = "http://localhost:4000/api";
-
 export default function Mine() {
   const TOTAL_CELLS = 25;
   const [betAmount, setBetAmount] = useState(100);
@@ -39,7 +37,7 @@ export default function Mine() {
   const blastSoundRef = useRef(new Audio(bombBlastSound));
   const cashoutRef = useRef(new Audio(cashOutSound));
 
-  // ✅ Load user from localStorage (with token)
+  // Load user from localStorage (with token)
   const token = localStorage.getItem("token");
   useEffect(() => {
     if (token) {
@@ -51,7 +49,7 @@ export default function Mine() {
     }
   }, [token]);
 
-  // ✅ Keep background music settings
+  // Keep background music settings
   useEffect(() => {
     bgMusicRef.current.loop = true;
     bgMusicRef.current.volume = 0.25;
@@ -61,7 +59,7 @@ export default function Mine() {
     };
   }, []);
 
-  // ✅ Dynamic Multiplier & Profit
+  // Dynamic Multiplier & Profit (logic unchanged)
   const multiplier = useMemo(() => {
     if (openedSafeCount <= 0) return 1;
     const total = TOTAL_CELLS;
@@ -75,15 +73,18 @@ export default function Mine() {
     [betAmount, multiplier]
   );
 
-  // ✅ Start Game
+  // Start Game
   const startGame = async () => {
     try {
       setLoading(true);
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/start`, {
-        username: user.username,
-        betAmount,
-        minesCount,
-      });
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/game/mine/start`,
+        {
+          username: user.username,
+          betAmount,
+          minesCount,
+        }
+      );
       const { gameId: gid } = res.data;
       setGameId(gid);
       setGameStatus("playing");
@@ -97,12 +98,15 @@ export default function Mine() {
       );
 
       startSoundRef.current.currentTime = 0;
-      startSoundRef.current.play();
+      startSoundRef.current.play().catch(() => {});
       bgMusicRef.current.currentTime = 0;
       bgMusicRef.current.play().catch(() => {});
 
-      // ✅ Refresh balance from server
-      const userRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`, { username: user.username });
+      // Refresh balance
+      const userRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`,
+        { username: user.username }
+      );
       setUserBalance(userRes.data.user.balance);
 
       toast.success("Game started");
@@ -114,14 +118,24 @@ export default function Mine() {
     }
   };
 
-  // ✅ Open cell logic
+  // Open cell logic
   const openCell = async (idx) => {
     if (!gameId || gameStatus !== "playing") return;
     if (tiles[idx].revealed) return;
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/openCell`, { gameId, index: idx });
-      const { isMine, revealed, openedSafeCount: opened, status, profit, mines } = res.data;
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/game/mine/openCell`,
+        { gameId, index: idx }
+      );
+      const {
+        isMine,
+        revealed,
+        openedSafeCount: opened,
+        status,
+        profit,
+        mines,
+      } = res.data;
 
       let updatedTiles = [];
 
@@ -145,12 +159,12 @@ export default function Mine() {
 
       if (isMine) {
         blastSoundRef.current.currentTime = 0;
-        blastSoundRef.current.play();
+        blastSoundRef.current.play().catch(() => {});
         bgMusicRef.current.pause();
         toast.error("💣 You hit a mine! Game Over!");
       } else {
         gemSoundRef.current.currentTime = 0;
-        gemSoundRef.current.play();
+        gemSoundRef.current.play().catch(() => {});
 
         if (status === "won") {
           bgMusicRef.current.pause();
@@ -158,8 +172,11 @@ export default function Mine() {
         }
       }
 
-      // ✅ Update balance
-      const userRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`, { username: user.username });
+      // Update balance
+      const userRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`,
+        { username: user.username }
+      );
       setUserBalance(userRes.data.user.balance);
     } catch (err) {
       console.error(err);
@@ -167,21 +184,27 @@ export default function Mine() {
     }
   };
 
-  // ✅ Cashout
+  // Cashout
   const cashout = async () => {
     if (!gameId || gameStatus !== "playing") return;
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/cashOut`, { gameId });
+      const res = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/game/mine/cashOut`,
+        { gameId }
+      );
       const { profit } = res.data;
       cashoutRef.current.currentTime = 0;
-      cashoutRef.current.play();
+      cashoutRef.current.play().catch(() => {});
       bgMusicRef.current.pause();
       setGameStatus("cashed");
       setTiles((prev) => prev.map((c) => ({ ...c, revealed: true })));
       toast.success(`Cashed out ₹${profit}`);
 
-      // ✅ Refresh balance
-      const userRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`, { username: user.username });
+      // Refresh balance
+      const userRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/game/mine/checkUser`,
+        { username: user.username }
+      );
       setUserBalance(userRes.data.user.balance);
     } catch (err) {
       console.error(err);
@@ -204,119 +227,215 @@ export default function Mine() {
     bgMusicRef.current.currentTime = 0;
   };
 
+  // Helper: display for tile classes (UI only)
+  const tileClass = (t) => {
+    if (t.revealed) {
+      return t.isMine
+        ? "bg-gradient-to-br from-red-600 to-red-800 border-red-800 shadow-[0_6px_20px_rgba(220,38,38,0.18)]"
+        : "bg-gradient-to-br from-purple-600 to-purple-800 border-purple-900 shadow-[0_6px_20px_rgba(124,58,237,0.18)]";
+    }
+    return "bg-[#232323] hover:brightness-110 border border-[#2b2b2b] hover:shadow-[0_0_16px_rgba(124,58,237,0.09)]";
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#1a103d] to-[#000000] text-white flex items-center justify-center p-6">
+    <div className="min-h-[91vh] bg-[#0b0b0b] text-white flex items-center justify-center p-4">
       <Toaster position="top-center" />
-      <div className="max-w-6xl w-full backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl rounded-3xl overflow-hidden p-6 flex flex-col md:flex-row gap-8">
-        {/* GRID */}
-        <div className="flex-1 bg-[#1a103d]/60 border border-purple-700/40 rounded-xl p-5 grid grid-cols-5 gap-2.5">
-          {tiles.map((t, idx) => (
-            <button
-              key={t.id}
-              onClick={() => openCell(idx)}
-              disabled={gameStatus !== "playing" || t.revealed}
-              className={`aspect-square rounded-md flex items-center justify-center transition-all duration-200 ease-out shadow-lg ${
-                t.revealed
-                  ? t.isMine
-                    ? "bg-gradient-to-br from-red-600 to-red-800"
-                    : "bg-gradient-to-br from-purple-500 to-purple-700"
-                  : "bg-gradient-to-br from-[#1c0045] to-[#2a0066] hover:brightness-125 border border-purple-900/40 hover:shadow-[0_0_12px_#7e22ce50]"
-              }`}
-            >
-              {t.revealed && (
-                <img
-                  src={t.isMine ? boomImage : GemImage}
-                  alt={t.isMine ? "Mine" : "Gem"}
-                  className="w-9 h-9 transition-transform duration-300 transform hover:scale-110"
-                />
-              )}
-            </button>
-          ))}
-        </div>
 
-        {/* CONTROL PANEL */}
-        <div className="w-full md:w-1/3 bg-[#1a103d]/70 border border-purple-700/40 rounded-xl p-6 shadow-xl flex flex-col justify-between">
+      <div className="w-full h-full max-w-7xl grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Left control panel: md:col-span-4 */}
+        <div className="md:col-span-4  md:h-[85vh] col-span-1 bg-[#171717] rounded-2xl border border-[#232323] p-5 flex flex-col justify-between shadow-xl">
           <div>
-            <div className="flex items-center justify-between gap-3 mb-6">
-              <div className="flex items-center gap-3">
-                <Zap className="w-6 h-6 text-purple-400" />
-                <h2 className="text-2xl font-semibold tracking-wide">
-                  Mines Game
-                </h2>
+            {/* Tabs */}
+            <div className="flex items-center gap-4 mb-4 border-b border-[#252525] pb-3">
+              <button className="text-sm font-semibold text-purple-300 border-b-2 border-purple-500 pb-2">
+                Manual
+              </button>
+              <button className="text-sm text-gray-400">Auto</button>
+            </div>
+
+            {/* Amount row */}
+            <label className="text-xs text-gray-400">Amount</label>
+            <div className="mt-2 mb-3 flex items-center gap-2">
+              <div className="bg-[#1f1f1f] px-3 py-2 rounded-md flex items-center gap-2 border border-[#2c2c2c]">
+                <span className="text-sm">🇮🇳</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={betAmount}
+                  onChange={(e) => setBetAmount(Number(e.target.value))}
+                  className="bg-transparent outline-none text-white w-28 sm:w-full text-sm"
+                />
               </div>
-              <div className="text-sm text-right">
-                <div>Balance</div>
-                <div className="font-semibold">₹{userBalance ?? "—"}</div>
+
+              <div className="flex gap-2">
+                <button className="px-2 py-2 bg-[#1f1f1f] text-xs rounded-md border border-[#2b2b2b] hover:bg-[#2a1e3d] hover:text-white transition">
+                  1/2
+                </button>
+                <button className="px-2 py-2 bg-[#1f1f1f] text-xs rounded-md border border-[#2b2b2b] hover:bg-[#2a1e3d] hover:text-white transition">
+                  2×
+                </button>
               </div>
             </div>
 
-            <div className="text-sm opacity-80 mb-2">
-              Logged in as: <b className="text-purple-400">{user.username}</b>
+            {/* Quick amount chips */}
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {["10", "100", "1k", "10k"].map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setBetAmount(Number(v.replace("k", "000")))}
+                  className="py-2 text-sm bg-[#1a1a1a] rounded-md border border-[#2b2b2b] hover:bg-[#262626] transition"
+                >
+                  {v}
+                </button>
+              ))}
             </div>
 
-            <label className="text-sm opacity-80">Bet Amount (₹)</label>
-            <input
-              type="number"
-              min="1"
-              value={betAmount}
-              onChange={(e) => setBetAmount(Number(e.target.value))}
-              className="w-full bg-white/10 border border-purple-500/30 rounded-md p-2 text-sm mb-4 outline-none focus:ring-2 focus:ring-purple-400"
-            />
+            {/* Mines slider */}
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-gray-400 mb-2">
+                <span>Mines</span>
+                <span className="text-white font-medium">{minesCount}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="24"
+                value={minesCount}
+                onChange={(e) => setMinesCount(Number(e.target.value))}
+                className="w-full accent-purple-500"
+              />
+            </div>
 
-            <label className="text-sm opacity-80">
-              Number of Mines: {minesCount}
-            </label>
-            <input
-              type="range"
-              min="1"
-              max="20"
-              value={minesCount}
-              onChange={(e) => setMinesCount(Number(e.target.value))}
-              className="w-full accent-purple-500 mb-4"
-            />
-
-            <div className="text-sm space-y-1">
+            {/* Info */}
+            <div className="text-sm text-gray-300 space-y-2 mb-4">
               <div>
                 Multiplier:{" "}
-                <b className="text-purple-400">{multiplier.toFixed(4)}×</b>
+                <span className="text-purple-300 font-semibold">
+                  {multiplier.toFixed(4)}×
+                </span>
               </div>
               <div>Current Profit: ₹{currentProfit}</div>
-              <div className="text-xs text-gray-300 mt-2">
+              <div className="text-xs text-gray-500">
                 Game state: {gameStatus}
+              </div>
+            </div>
+
+            {/* Big Bet button */}
+            <div className="mb-3">
+              <button
+                onClick={startGame}
+                disabled={loading || gameStatus === "playing"}
+                className={`w-full py-3 rounded-full font-semibold text-black shadow-lg transition transform ${
+                  loading || gameStatus === "playing"
+                    ? "bg-purple-400/60 cursor-not-allowed"
+                    : "bg-gradient-to-r from-purple-500 to-purple-700 hover:scale-[1.02] hover:brightness-105"
+                }`}
+              >
+                {loading ? <ClipLoader size={18} color="#000" /> : "Bet"}
+              </button>
+              <div className="mt-3 text-center text-xs text-gray-400">
+                Betting with 0 will enter demo mode.
               </div>
             </div>
           </div>
 
-          <div className="mt-6 space-y-3">
-            <div className="flex gap-3">
-              <button
-                onClick={startGame}
-                disabled={loading}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-purple-400 text-black font-semibold rounded-md py-2 hover:scale-[1.02] transition-all"
-              >
-                {loading ? <ClipLoader size={18} /> : "Start Game"}
-              </button>
-              <button
-                onClick={resetGame}
-                className="px-4 py-2 border border-purple-500/50 rounded-md text-sm hover:bg-purple-900/30"
-              >
-                <RefreshCw className="w-4 h-4 inline-block mr-2" /> Reset
-              </button>
+          {/* Bottom controls */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-gray-400">Balance</div>
+                <div className="font-semibold">₹{userBalance ?? "—"}</div>
+              </div>
+
+              <div className="text-right">
+                <div className="text-xs text-gray-400">Player</div>
+                <div className="text-purple-300 font-medium">
+                  {user.username || "—"}
+                </div>
+              </div>
             </div>
 
-            <button
-              onClick={cashout}
-              disabled={
-                !gameId || gameStatus !== "playing" || openedSafeCount <= 0
-              }
-              className={`w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-semibold transition-all duration-200 ${
-                openedSafeCount > 0 && gameStatus === "playing"
-                  ? "bg-gradient-to-r from-green-400 to-green-600 text-black hover:scale-[1.02]"
-                  : "bg-gray-600/40 text-gray-300 cursor-not-allowed"
-              }`}
-            >
-              <DollarSign className="w-4 h-4" /> Cashout ₹{currentProfit}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={resetGame}
+                className="flex-1 py-2 rounded-md border border-[#2b2b2b] hover:bg-[#232026] transition flex items-center justify-center gap-2 text-sm"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Reset
+              </button>
+
+              <button
+                onClick={cashout}
+                disabled={
+                  !gameId || gameStatus !== "playing" || openedSafeCount <= 0
+                }
+                className={`py-2 px-4 rounded-md font-semibold text-sm transition ${
+                  openedSafeCount > 0 && gameStatus === "playing"
+                    ? "bg-gradient-to-r from-green-400 to-green-600 text-black"
+                    : "bg-[#313131] text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                <DollarSign className="w-4 h-4 inline-block mr-1" />
+                Cashout ₹{currentProfit}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right game area: md:col-span-8 */}
+        <div className="md:col-span-8  col-span-1 flex flex-col gap-4">
+          {/* Top multiplier badges (responsive) */}
+          <div className="flex items-center gap-3">
+            <div className="px-3 py-2 rounded-md bg-[#252525] text-xs text-gray-300">
+              0×
+            </div>
+            <div className="px-3 py-2 rounded-md bg-green-700 text-white text-xs font-semibold">
+              5.2×
+            </div>
+            <div className="px-3 py-2 rounded-md bg-green-700 text-white text-xs font-semibold">
+              1.69×
+            </div>
+            <div className="px-3 py-2 rounded-md bg-green-700 text-white text-xs font-semibold">
+              1.16×
+            </div>
+            <div className="ml-auto text-sm text-gray-400 hidden sm:block">
+              Opened:{" "}
+              <span className="text-white font-medium">{openedSafeCount}</span>
+            </div>
+          </div>
+
+          {/* Game board container */}
+          <div className="flex-1  bg-[#151515] rounded-2xl border border-[#242424] p-2 shadow-inner">
+            <div className="w-full max-w-md md:max-w-lg mx-auto">
+              <div className="grid grid-cols-5 gap-3">
+                {tiles.map((t, idx) => (
+                  <button
+                    key={t.id}
+                    onClick={() => openCell(idx)}
+                    disabled={gameStatus !== "playing" || t.revealed}
+                    className={`${tileClass(
+                      t
+                    )} aspect-square rounded-md flex items-center justify-center transition-all duration-200 ease-out`}
+                  >
+                    {t.revealed ? (
+                      <img
+                        src={t.isMine ? boomImage : GemImage}
+                        alt={t.isMine ? "Mine" : "Gem"}
+                        className="w-8 h-8"
+                      />
+                    ) : (
+                      // covered tile icon (simple dot or nothing)
+                      <div className="w-0 h-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer: small notes (mobile friendly) */}
+          <div className="text-xs text-gray-500 text-center md:text-left">
+            Tip: Open safe tiles to increase multiplier. Avoid mines!
           </div>
         </div>
       </div>
